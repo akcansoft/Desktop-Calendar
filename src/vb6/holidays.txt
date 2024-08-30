@@ -1,0 +1,22 @@
+; akcanSoft Desktop Calender
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; tatil günlerini 
+; g/a formatýnda giriniz
+; g=Gün 1-31 arasý. Baþýnda 0 yok 
+; a=Ay 1-12 arasý. Baþýnda 0 yok)
+; Baþýnda ;(noktalý virgül) olan satýrlar açýklama satýrlarýdýr.
+; Dikkate alýnmaz
+
+;Yýlbaþý
+1/1
+;UE ve Çocuk bayramý
+23/4
+;AAG ve Spor bayramý 
+19/5
+; 15 Temmuz
+15/7
+;Zafer Bayramý 
+30/8
+;Cumhuriyet bayramý
+29/10
+
