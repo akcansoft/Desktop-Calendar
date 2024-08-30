@@ -1,15 +1,12 @@
 ; akcanSoft Desktop Calender
 ; ~~~~~TR~~~~~~~~~~~~~~~~~~~~~~~
-; tatil günlerini 
-; g/a formatında giriniz
+; tatil günlerini g/a formatında giriniz
 ; g=Gün 1-31 arası. Başında 0 yok 
 ; a=Ay 1-12 arası. Başında 0 yok
-; Başında ;(noktalı virgül) olan satırlar açıklama satırlarıdır.
-; Dikkate alınmaz
+; Başında ;(noktalı virgül) olan satırlar açıklama satırlarıdır. Dikkate alınmaz
 
 ; ~~~~ENG~~~~~~~~~~~~~~~~~~~~~~~
-; holiday days 
-; enter in d/m format
+; enter holidays in d/m format
 ; d=Day 1-31. No 0 at the beginning 
 ; m=Month 1-12. No 0 at the beginning
 ; Lines preceded by ; (semicolon) are comment lines.
