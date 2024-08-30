@@ -1,22 +1,29 @@
 ; akcanSoft Desktop Calender
-; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-; tatil günlerini 
-; g/a formatında giriniz
-; g=Gün 1-31 arası. Başında 0 yok 
-; a=Ay 1-12 arası. Başında 0 yok)
-; Başında ;(noktalı virgül) olan satırlar açıklama satırlarıdır.
-; Dikkate alınmaz
+; ~~~~~TR~~~~~~~~~~~~~~~~~~~~~~~
+; tatil gÃ¼nlerini 
+; g/a formatÄ±nda giriniz
+; g=GÃ¼n 1-31 arasÄ±. BaÅŸÄ±nda 0 yok 
+; a=Ay 1-12 arasÄ±. BaÅŸÄ±nda 0 yok
+; BaÅŸÄ±nda ;(noktalÄ± virgÃ¼l) olan satÄ±rlar aÃ§Ä±klama satÄ±rlarÄ±dÄ±r.
+; Dikkate alÄ±nmaz
 
-;Yılbaşı
+; ~~~~ENG~~~~~~~~~~~~~~~~~~~~~~~
+; holiday days 
+; enter in d/m format
+; d=Day 1-31. No 0 at the beginning 
+; m=Month 1-12. No 0 at the beginning
+; Lines preceded by ; (semicolon) are comment lines.
+
+;YÄ±lbaÅŸÄ±
 1/1
-;UE ve Çocuk bayramı
+;UE ve Ã‡ocuk bayramÄ±
 23/4
-;AAG ve Spor bayramı 
+;AAG ve Spor bayramÄ± 
 19/5
 ; 15 Temmuz
 15/7
-;Zafer Bayramı 
+;Zafer BayramÄ± 
 30/8
-;Cumhuriyet bayramı
+;Cumhuriyet bayramÄ±
 29/10
 
