@@ -1,5 +1,5 @@
 # AS Desktop Calendar
-This application makes the current month and next month calendar on the desktop image.
+This application makes the current month and next month calendar in local language on the desktop image.
 ![Screenshot](https://github.com/akcansoft/Desktop-Calendar/blob/main/ss-1.jpg)
 
 This project is a Visual Basic 6 (VB6) application that dynamically generates a desktop wallpaper with an embedded calendar.
@@ -25,6 +25,7 @@ The application also highlights holidays and weekends.
 
 3. **Running the Application:**
    - Run the compiled executable. The application will automatically generate a new wallpaper and set it as the desktop background.
+   - The application does not run continuously in memory. Therefore, place the application shortcut in the Start/All programs/Startup folder so that the calendar is updated every time windows starts.
 
 4. **Reverting to Original Wallpaper:**
    - The application saves the original wallpaper before applying the new one. To revert, simply close the application, and the original wallpaper will be restored.
