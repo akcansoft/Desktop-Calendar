@@ -38,7 +38,8 @@ Option Explicit
 ' Mesut AKCAN
 ' 16/04/2004
 '
-' Update: 30/08/2024
+' Update: 01/09/2024
+' R2
 '
 ' http://akcansoft.blogspot.com
 ' http://youtube.com/mesutakcan
@@ -58,7 +59,7 @@ Const holidaysFname As String = "\holidays.txt"
 'Font
 Const txtFontName As String = "Tahoma"
 Const txtFontBold As Boolean = True
-Const fontRatio As Double = 0.00125
+Const fontRatio As Double = 0.0015
 'Font colors
 Const holidayColor As Long = vbRed
 Const fontColor As Long = vbWhite
@@ -97,78 +98,78 @@ Private Sub Form_Load()
     End If
   End If
 
-' Create a list of month names in the local language
-For n = 1 To 12
-  months(n) = Format("1/" & n & "/2024", "MMMM") ' Year is irrelevant
-Next
+  ' Create a list of month names in the local language
+  For n = 1 To 12
+    months(n) = Format("1/" & n & "/2024", "MMMM") ' Year is irrelevant
+  Next
+  
+  ' Create a list of weekdays in the local language. The first date provided is Monday
+  For n = 1 To 7
+    weeks(n) = Format(n & "/7/2024", "ddd") ' 01/07/2024 -> Monday
+  Next
+  
+  ' Load holidays from the file
+  holidays = LoadHolidays()
+  
+  Me.Width = Screen.Width
+  Me.Height = Screen.Height
+  Me.Move 0, 0
+  
+  currentMonth = Month(Now()) ' Current month
+  currentYear = Year(Now()) ' Current year
 
-' Create a list of weekdays in the local language. The first date provided is Monday
-For n = 1 To 7
-  weeks(n) = Format(n & "/7/2024", "ddd") ' 01/07/2024 -> Monday
-Next
+  With picBox
+    .Width = Screen.Width / Screen.TwipsPerPixelX
+    .Height = Screen.Height / Screen.TwipsPerPixelY
+    .Move 0, 0
+    .Font.Name = txtFontName
+    .Font.Size = Int(Screen.Height * fontRatio)
+    .FontBold = txtFontBold
+    .FillColor = circleFillColor
+    
+    ApplyWallpaper orjDesktopWallpaperFile
+    
+    '~~~~~~~~~~~~ Write today's date ~~~~~~~~~~~~
+    dateText = Format(Now, "d MMMM yyyy dddd")
+    dateTxtWidth = .TextWidth(dateText)
+    offsetX = (.Width / 2) - (dateTxtWidth / 2) ' Center the text on the screen
+    offsetY = 10
+    PicPrint offsetX, offsetY, 2, dateText, fontColor
+    
+    '~~~~~~~~~~~~ This month ~~~~~~~~~~~~~~~~~~~~
+    Calendar offsetX, .CurrentY, 2
+    
+    '~~~~~~~~~~~~ Next month ~~~~~~~~~~~~~~~~~~~~
+    .Font.Size = Int(.Font.Size / 2) ' Reduce font size for next month's text
+    .CurrentX = offsetX
+    .CurrentY = .CurrentY + .TextHeight("8") / 2 ' Add half the text height
+    
+    ' If the current month is December, the next month will be January of the following year
+    currentMonth = currentMonth + 1
+    
+    If currentMonth > 12 Then
+      currentMonth = 1
+      currentYear = currentYear + 1
+    End If
+    
+    posX = .CurrentX
+    posY = .CurrentY
+    PicPrint posX, posY, 1, months(currentMonth) & " " & currentYear, fontColor ' Next month's header
+    
+    '~~~~~~~~~~~~ Next month calendar ~~~~~~~~~~~~
+    Calendar offsetX, .CurrentY, 1
+    
+    '~~~~~ Write "akcanSoft" ~~~~~~~~~~
+    .CurrentX = posX
+    PicPrint posX, .CurrentY, 1, "akcanSoft", &HCCCCCC
+  End With
 
-' Load holidays from the file
-holidays = LoadHolidays()
-
-Me.Width = Screen.Width
-Me.Height = Screen.Height
-Me.Move 0, 0
-
-currentMonth = Month(Now()) ' Current month
-currentYear = Year(Now()) ' Current year
-
-With picBox
-  .Width = Screen.Width / Screen.TwipsPerPixelX
-  .Height = Screen.Height / Screen.TwipsPerPixelY
-  .Move 0, 0
-  .Font.Name = txtFontName
-  .Font.Size = Int(Screen.Height * fontRatio)
-  .FontBold = txtFontBold
-  .FillColor = circleFillColor
-  
-  ApplyWallpaper orjDesktopWallpaperFile
-  
-  '~~~~~~~~~~~~ Write today's date ~~~~~~~~~~~~
-  dateText = Format(Now, "d MMMM yyyy dddd")
-  dateTxtWidth = .TextWidth(dateText)
-  offsetX = (.Width / 2) - (dateTxtWidth / 2) ' Center the text on the screen
-  offsetY = 10
-  PicPrint offsetX, offsetY, 2, dateText, fontColor
-  
-  '~~~~~~~~~~~~ This month ~~~~~~~~~~~~~~~~~~~~
-  Calendar offsetX, .CurrentY, 2
-  
-  '~~~~~~~~~~~~ Next month ~~~~~~~~~~~~~~~~~~~~
-  .Font.Size = Int(.Font.Size / 2) ' Reduce font size for next month's text
-  .CurrentX = offsetX
-  .CurrentY = .CurrentY + .TextHeight("8") / 2 ' Add half the text height
-  
-  ' If the current month is December, the next month will be January of the following year
-  currentMonth = currentMonth + 1
-  
-  If currentMonth > 12 Then
-    currentMonth = 1
-    currentYear = currentYear + 1
-  End If
-  
-  posX = .CurrentX
-  posY = .CurrentY
-  PicPrint posX, posY, 1, months(currentMonth) & " " & currentYear, fontColor ' Next month's header
-  
-  '~~~~~~~~~~~~ Next month calendar ~~~~~~~~~~~~
-  Calendar offsetX, .CurrentY, 1
-  
-  '~~~~~ Write "akcanSoft" ~~~~~~~~~~
-  .CurrentX = posX
-  PicPrint posX, .CurrentY, 1, "akcanSoft", &HCCCCCC
-End With
-
-Dim wallpaperFileName As String
-wallpaperFileName = App.Path & wallpaperFname
-SavePicture picBox.Image, wallpaperFileName
-' Set the saved image file as the desktop wallpaper
-SystemParametersInfo SPI_SETDESKWALLPAPER, 0, wallpaperFileName, SPIF_UPDATEINIFILE
-End
+  Dim wallpaperFileName As String
+  wallpaperFileName = App.Path & wallpaperFname
+  SavePicture picBox.Image, wallpaperFileName
+  ' Set the saved image file as the desktop wallpaper
+  SystemParametersInfo SPI_SETDESKWALLPAPER, 0, wallpaperFileName, SPIF_UPDATEINIFILE
+  End
 End Sub
 
 '~~~~~~~~~~~~ CALENDAR ~~~~~~~~~~~~~~~~~~
@@ -235,7 +236,7 @@ Function GetDayColor(dayCounter As Byte, currentMonth As Byte, currentYear As In
   Else
     GetDayColor = fontColor
     ' If there are holidays
-    If holidays <> "" And InStr(1, holidays, CStr(dayCounter) & "/" & CStr(currentMonth)) > 0 Then
+    If holidays <> "" And InStr(1, holidays, "," & CStr(dayCounter) & "/" & CStr(currentMonth) & ",") > 0 Then
       GetDayColor = holidayColor
     End If
   End If
@@ -269,7 +270,7 @@ Private Function LoadHolidays() As String
     If IsDate(lineText & "/2024") Then txtHoliday = txtHoliday & lineText & ","
     Loop
     Close
-  LoadHolidays = txtHoliday
+    If txtHoliday <> "" Then LoadHolidays = "," & txtHoliday
   End If
   
   ' Disable error handling
