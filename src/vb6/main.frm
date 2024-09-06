@@ -1,31 +1,54 @@
 VERSION 5.00
 Begin VB.Form frmMain 
+   Appearance      =   0  'Flat
+   BackColor       =   &H80000005&
    BorderStyle     =   0  'None
    Caption         =   "Form1"
-   ClientHeight    =   3435
+   ClientHeight    =   2805
    ClientLeft      =   0
    ClientTop       =   75
-   ClientWidth     =   4005
+   ClientWidth     =   6420
+   FillStyle       =   0  'Solid
+   Icon            =   "main.frx":0000
    LinkTopic       =   "Form1"
-   ScaleHeight     =   229
+   ScaleHeight     =   187
    ScaleMode       =   3  'Pixel
-   ScaleWidth      =   267
+   ScaleWidth      =   428
    ShowInTaskbar   =   0   'False
    StartUpPosition =   3  'Windows Default
    Begin VB.PictureBox picBox 
+      Appearance      =   0  'Flat
       AutoRedraw      =   -1  'True
       AutoSize        =   -1  'True
-      BackColor       =   &H00FF972F&
+      BackColor       =   &H00FF0000&
+      BorderStyle     =   0  'None
       FillColor       =   &H0030B4F3&
       FillStyle       =   0  'Solid
+      BeginProperty Font 
+         Name            =   "Tahoma"
+         Size            =   24
+         Charset         =   162
+         Weight          =   700
+         Underline       =   0   'False
+         Italic          =   0   'False
+         Strikethrough   =   0   'False
+      EndProperty
+      ForeColor       =   &H80000008&
       Height          =   2415
       Left            =   0
-      ScaleHeight     =   157
+      ScaleHeight     =   161
       ScaleMode       =   3  'Pixel
-      ScaleWidth      =   189
+      ScaleWidth      =   193
       TabIndex        =   0
       Top             =   0
       Width           =   2895
+   End
+   Begin VB.Image img 
+      Appearance      =   0  'Flat
+      Height          =   2295
+      Left            =   3000
+      Top             =   0
+      Width           =   2775
    End
 End
 Attribute VB_Name = "frmMain"
@@ -34,70 +57,77 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Option Explicit
-'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' AS Desktop Calendar
+' This application makes the current month
+' and next month calendar in local language
+' on the desktop image.
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' Mesut AKCAN
-' 16/04/2004
-'
-' Update: 01/09/2024
-' R2
-'
-' http://akcansoft.blogspot.com
-' http://youtube.com/mesutakcan
+' First release: 16/04/2004
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' Update: 06/09/2024
+' v1.1
+' R3
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' https://akcansoft.blogspot.com
+' https://youtube.com/mesutakcan
+' https://github.com/akcansoft
 ' makcan@gmail.com
-'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Const wallpaperFname As String = "\aswallpaper.bmp"
+Const holidaysFname As String = "\holidays.txt"
+Const iniFile As String = "settings.ini"
+Const COLOR_DESKTOP As Long = 1
+Const SPI_SETDESKWALLPAPER = 20
+Const SPIF_UPDATEINIFILE = 1
+Const HKEY_CURRENT_USER = &H80000001
+
+Private Declare Function RoundRect Lib "gdi32" (ByVal hdc As Long, _
+  ByVal X1 As Long, ByVal Y1 As Long, _
+  ByVal X2 As Long, ByVal Y2 As Long, _
+  ByVal X3 As Long, ByVal Y3 As Long) As Long
+
 Private Declare Function SystemParametersInfo Lib "user32" Alias "SystemParametersInfoA" _
   (ByVal uAction As Long, ByVal uParam As Long, ByVal lpvParam As String, _
   ByVal fuWinIni As Long) As Long
 Private Declare Function GetSysColor Lib "user32" (ByVal nIndex As Long) As Long
 
-Const COLOR_DESKTOP As Long = 1
-Const SPI_SETDESKWALLPAPER = 20
-Const SPIF_UPDATEINIFILE = 1
-Const HKEY_CURRENT_USER = &H80000001
-Const wallpaperFname As String = "\aswallpaper.bmp"
-Const holidaysFname As String = "\holidays.txt"
-'Font
-Const txtFontName As String = "Tahoma"
-Const txtFontBold As Boolean = True
-Const fontRatio As Double = 0.0015
 'Font colors
-Const holidayColor As Long = vbRed
-Const fontColor As Long = vbWhite
-Const fontShadowColor As Long = vbBlack
-Const weekdayFontColor As Long = &H15AE4F
-Const circleFillColor As Long = &H30B4F3
-
+Dim fontColor As Long 'The color of the calendar font
+Dim shadowColor As Long 'The color of the shadow effect
+Dim holidayColor As Long 'The color for the holidays text
+Dim weekDayColor As Long 'The color for the weekdays text
+Dim currentDayShape As String ' The shape used to highlight the current day.
 Dim currentMonth As Byte, currentYear As Integer
-Dim weeks(1 To 7) As String * 2
+Dim weekDays(1 To 7) As String * 2
 Dim holidays As String
 
 Private Sub Form_Load()
   Dim n As Byte
-  Dim orjDesktopWallpaperFile As String
-  Dim months(1 To 12) As String, dateText As String
-  Dim dateTxtWidth As Integer, offsetX As Integer, offsetY As Integer
-  Dim holidaysFile As String
+  Dim orjWallpaperFile As String
+  Dim months(1 To 12) As String ', dateText As String
+  Dim offsetX As Integer, offsetY As Integer
   Dim posX As Integer, posY As Integer
-
-  orjDesktopWallpaperFile = QueryValue(HKEY_CURRENT_USER, "Control Panel\Desktop", "Wallpaper")
-
-  ' Desktop background color
-  picBox.BackColor = GetSysColor(COLOR_DESKTOP)
-
-  ' If a desktop wallpaper is set
-  If orjDesktopWallpaperFile <> "" Then
-    ' If the desktop wallpaper is the same as the one in the application directory
-    If orjDesktopWallpaperFile = App.Path & wallpaperFname Then
-      ' Retrieve the previously saved desktop wallpaper from the registry
-      orjDesktopWallpaperFile = GetSetting(App.EXEName, "PrevWallPaper", "File")
-    
-    ' If the desktop wallpaper has changed
-    Else
-      ' Save the original desktop wallpaper file to the registry
-      SaveSetting App.EXEName, "PrevWallPaper", "File", orjDesktopWallpaperFile
-    End If
+  Dim prevWallpaper As String, wpFile As String
+  
+  shadowColor = CLng(ReadINI(iniFile, "FONT", "shadowColor", "&H000000"))
+  fontColor = CLng(ReadINI(iniFile, "FONT", "fontColor", "&HFFFFFF"))
+  holidayColor = CLng(ReadINI(iniFile, "FONT", "holidayColor", "&H0000FF"))
+  weekDayColor = CLng(ReadINI(iniFile, "FONT", "weekdayColor", "&H15AE4F"))
+  
+  currentDayShape = ReadINI(iniFile, "SHAPE", "currentDayShape", "RoundRectangle")
+  
+  orjWallpaperFile = QueryValue(HKEY_CURRENT_USER, "Control Panel\Desktop", "Wallpaper")
+  prevWallpaper = ReadINI(iniFile, "WALLPAPER", "prevWallpaper")
+   
+  ' Check if the original wallpaper exists and differs from the app wallpaper
+  If orjWallpaperFile <> "" And FileExists(orjWallpaperFile) And orjWallpaperFile <> App.Path & wallpaperFname Then
+      wpFile = orjWallpaperFile
+      If orjWallpaperFile <> prevWallpaper Then WriteINI iniFile, "WALLPAPER", "prevWallpaper", orjWallpaperFile
+  ElseIf prevWallpaper <> "" And FileExists(prevWallpaper) Then
+      wpFile = prevWallpaper
   End If
-
+  
   ' Create a list of month names in the local language
   For n = 1 To 12
     months(n) = Format("1/" & n & "/2024", "MMMM") ' Year is irrelevant
@@ -105,77 +135,91 @@ Private Sub Form_Load()
   
   ' Create a list of weekdays in the local language. The first date provided is Monday
   For n = 1 To 7
-    weeks(n) = Format(n & "/7/2024", "ddd") ' 01/07/2024 -> Monday
+    weekDays(n) = Format(n & "/7/2024", "ddd") ' 01/07/2024 -> Monday
   Next
   
   ' Load holidays from the file
   holidays = LoadHolidays()
-  
-  Me.Width = Screen.Width
-  Me.Height = Screen.Height
-  Me.Move 0, 0
+  With Me
+    .ScaleMode = vbPixels
+    .BorderStyle = 0
+    .Appearance = 0
+    .Width = Screen.Width
+    .Height = Screen.Height
+    .Move 0, 0
+  End With
   
   currentMonth = Month(Now()) ' Current month
   currentYear = Year(Now()) ' Current year
 
   With picBox
-    .Width = Screen.Width / Screen.TwipsPerPixelX
-    .Height = Screen.Height / Screen.TwipsPerPixelY
+    .BorderStyle = 0
+    .Appearance = 0
+    .Width = Me.ScaleWidth
+    .Height = Me.ScaleHeight
     .Move 0, 0
-    .Font.Name = txtFontName
-    .Font.Size = Int(Screen.Height * fontRatio)
-    .FontBold = txtFontBold
-    .FillColor = circleFillColor
+    .Font.Name = ReadINI(iniFile, "FONT", "fontName", "Tahoma")
+    .FontBold = CBool(ReadINI(iniFile, "FONT", "fontBold", "True"))
+    .FontItalic = CBool(ReadINI(iniFile, "FONT", "fontItalic", "False"))
     
-    ApplyWallpaper orjDesktopWallpaperFile
+    '~~~~~~~~~~~~ This month settings ~~~~~~~~~~~
+    .Font.Size = Me.ScaleHeight / Val(ReadINI(iniFile, "FONT", "fontRatio_1", "45"))
+    ' The fill color of the shape for the current day
+    .FillColor = CLng(ReadINI(iniFile, "SHAPE", "shapeFillColor", "&H30B4F3"))
     
-    '~~~~~~~~~~~~ Write today's date ~~~~~~~~~~~~
-    dateText = Format(Now, "d MMMM yyyy dddd")
-    dateTxtWidth = .TextWidth(dateText)
-    offsetX = (.Width / 2) - (dateTxtWidth / 2) ' Center the text on the screen
-    offsetY = 10
-    PicPrint offsetX, offsetY, 2, dateText, fontColor
+    ApplyWallpaper wpFile
     
-    '~~~~~~~~~~~~ This month ~~~~~~~~~~~~~~~~~~~~
+    ' Position of the calendar start point(top center) + offset
+    offsetX = (.Width / 2) - (.TextWidth("8") * 21 / 2) + CInt(ReadINI(iniFile, "CALENDAR POSITION", "startOffsetX", "0")) '21 = 3chr * 7day
+    offsetY = CInt(ReadINI(iniFile, "CALENDAR POSITION", "startOffsetY", "10"))
+    
+    PicPrint offsetX, offsetY, 2, Format(Now, "d MMMM yyyy dddd"), fontColor ' Write today's date
+    '~~~~~~~~~~~~ This month calendar ~~~~~~~~~~~
     Calendar offsetX, .CurrentY, 2
     
-    '~~~~~~~~~~~~ Next month ~~~~~~~~~~~~~~~~~~~~
-    .Font.Size = Int(.Font.Size / 2) ' Reduce font size for next month's text
+    '~~~~~~~~~~~~ Next month settings ~~~~~~~~~~~
+    .Font.Size = Me.ScaleHeight / Val(ReadINI(iniFile, "FONT", "fontRatio_2", "65"))
     .CurrentX = offsetX
     .CurrentY = .CurrentY + .TextHeight("8") / 2 ' Add half the text height
-    
-    ' If the current month is December, the next month will be January of the following year
     currentMonth = currentMonth + 1
     
+    ' If the current month is December, the next month will be January of the following year
     If currentMonth > 12 Then
       currentMonth = 1
       currentYear = currentYear + 1
     End If
     
+    ' Position of the next month calendar start point
     posX = .CurrentX
     posY = .CurrentY
-    PicPrint posX, posY, 1, months(currentMonth) & " " & currentYear, fontColor ' Next month's header
+    
+    ' Next month's header
+    PicPrint posX, posY, 1, months(currentMonth) & " " & currentYear, fontColor
     
     '~~~~~~~~~~~~ Next month calendar ~~~~~~~~~~~~
     Calendar offsetX, .CurrentY, 1
     
-    '~~~~~ Write "akcanSoft" ~~~~~~~~~~
+    ' Write akcanSoft
     .CurrentX = posX
+    .Font.Size = .Font.Size / 2
     PicPrint posX, .CurrentY, 1, "akcanSoft", &HCCCCCC
   End With
-
+  
+  'save picturebox image to file
   Dim wallpaperFileName As String
   wallpaperFileName = App.Path & wallpaperFname
   SavePicture picBox.Image, wallpaperFileName
   ' Set the saved image file as the desktop wallpaper
   SystemParametersInfo SPI_SETDESKWALLPAPER, 0, wallpaperFileName, SPIF_UPDATEINIFILE
+  'App Exit
   End
 End Sub
 
 '~~~~~~~~~~~~ CALENDAR ~~~~~~~~~~~~~~~~~~
-Sub Calendar(offsetX, offsetY, o As Byte)
+Private Sub Calendar(x As Integer, y As Integer, o As Byte)
   Dim col As Byte, row As Byte, n As Byte
-  Dim dayCounter As Byte, posX As Integer, posY As Integer
+  Dim dayCounter As Byte
+  Dim posX As Integer, posY As Integer
   Dim txtWidth As Integer, txtHeight As Integer
   
   With picBox
@@ -185,13 +229,13 @@ Sub Calendar(offsetX, offsetY, o As Byte)
     ' Find out which day of the week the 1st of the month falls on
     col = Weekday("1/" + Str(currentMonth) + "/" + Str(currentYear), vbMonday) - 1
     row = 1 ' Start from row 1
-    posY = .CurrentY
+    posY = picBox.CurrentY '/ Screen.TwipsPerPixelY
     
     ' ~~~~~~~~~~~~~ Write the weekdays with 2 letters ~~~~~~~~
     For n = 1 To 7
-      PicPrint (n - 1) * txtWidth * 3 + offsetX, posY, o, weeks(n), weekdayFontColor
+      PicPrint (n - 1) * txtWidth * 3 + x, posY, o, weekDays(n), weekDayColor
     Next
-    
+
     '~~~~~~~~~~~~~~ Write the day numbers ~~~~~~~~~
     For dayCounter = 1 To 31
       If Not IsDate(dayCounter & "/" & currentMonth & "/" & currentYear) Then Exit For ' Exit if beyond the last day of the month
@@ -201,8 +245,8 @@ Sub Calendar(offsetX, offsetY, o As Byte)
         .CurrentY = row * txtHeight ' Move to the next row
         row = row + 1
       End If
-      posX = col * txtWidth * 3 + offsetX
-      posY = row * txtHeight + offsetY
+      posX = x + col * txtWidth * 3
+      posY = y + row * txtHeight
       .CurrentX = posX
       .CurrentY = posY
       col = col + 1
@@ -211,15 +255,26 @@ Sub Calendar(offsetX, offsetY, o As Byte)
       If o = 2 Then
         If dayCounter = Day(Now) Then ' If today is the current date
           ' Draw a filled ellipse around the date
-          picBox.Circle (posX + txtWidth - 1, posY - 1 + txtHeight / 2), txtHeight / 2 + (txtHeight / 3), fontColor, , , 0.75
+          Select Case currentDayShape
+            Case "Circle"
+              picBox.Circle (posX + txtWidth - 1, posY + txtHeight * 0.5), txtHeight * 0.65, fontColor
+            Case "Ellipse"
+              picBox.Circle (posX + txtWidth - 1, posY - 1 + txtHeight * 0.5), txtHeight * 0.5 + (txtHeight / 3), fontColor, , , 0.75
+            Case "Rectangle"
+              picBox.Line Step(-txtWidth / 2, 0)-Step(txtWidth * 2.75, txtHeight), fontColor, B
+            Case "RoundRectangle"
+              picBox.ForeColor = fontColor
+              RoundRect picBox.hdc, posX - txtWidth * 0.5, posY, posX + txtWidth * 2.5, posY + txtHeight, txtHeight * 0.6, txtHeight * 0.6 'X1, Y1, X2, Y2, X radius, Y radius
+          End Select
           .CurrentX = posX
           .CurrentY = posY
+          picBox.Refresh
         End If
       End If
       
       ' If the day number is less than 10, adjust the position by one character
       If dayCounter < 10 Then
-        posX = posX + txtWidth
+        posX = posX + txtWidth / 2
         .CurrentX = posX
       End If
       
@@ -229,7 +284,7 @@ Sub Calendar(offsetX, offsetY, o As Byte)
   End With
 End Sub
 
-Function GetDayColor(dayCounter As Byte, currentMonth As Byte, currentYear As Integer, holidays As String) As Long
+Private Function GetDayColor(dayCounter As Byte, currentMonth As Byte, currentYear As Integer, holidays As String) As Long
   ' Weekends are red
   If Weekday(dayCounter & "/" & currentMonth & "/" & currentYear, vbMonday) > 5 Then
     GetDayColor = holidayColor
@@ -242,15 +297,15 @@ Function GetDayColor(dayCounter As Byte, currentMonth As Byte, currentYear As In
   End If
 End Function
 
-Sub PicPrint(x As Integer, y As Integer, shadowOffset As Byte, text As String, txtColor As Long)
+Private Sub PicPrint(x As Integer, y As Integer, shadowOffset As Byte, text As String, txtColor As Long)
   With picBox
-    .ForeColor = fontShadowColor
-    .CurrentX = x
-    .CurrentY = y
+    .ForeColor = shadowColor
+    .CurrentX = x + shadowOffset
+    .CurrentY = y + shadowOffset
     picBox.Print text
     .ForeColor = txtColor
-    .CurrentX = x - shadowOffset
-    .CurrentY = y - shadowOffset
+    .CurrentX = x
+    .CurrentY = y
   picBox.Print text
 End With
 End Sub
@@ -261,7 +316,7 @@ Private Function LoadHolidays() As String
   
   ' Handle errors when opening the file
   On Error GoTo ErrorHandler
-  If Dir(holidaysFile) <> "" Then ' If the holidays file exists
+  If FileExists(holidaysFile) Then  ' If the holidays file exists
     Dim lineText As String, txtHoliday As String
     Open holidaysFile For Input As #1
     Do Until EOF(1)
@@ -284,43 +339,104 @@ ErrorHandler:
 End Function
 
 Private Sub ApplyWallpaper(wallpaperFile As String)
+  ' Desktop background color
+    picBox.BackColor = GetSysColor(COLOR_DESKTOP)
+    
   ' If a wallpaper is set
   If wallpaperFile <> "" Then
-    Dim img As Image
-    Dim h1, w1
-    Dim pWidth, pHeight
-    pWidth = picBox.ScaleWidth
-    pHeight = picBox.ScaleHeight
+    Dim picBoxWidth As Integer, picBoxHeight As Integer
+    picBoxWidth = picBox.ScaleWidth
+    picBoxHeight = picBox.ScaleHeight
     
-    Set img = Me.Controls.Add("VB.Image", "imgTemp")
+    On Error Resume Next
     img.Picture = LoadPicture(wallpaperFile)
-    
-    ' If the wallpaper is tiled
-    If QueryValue(HKEY_CURRENT_USER, "Control Panel\Desktop", "TileWallpaper") = "1" Then
-      For h1 = 0 To pHeight Step img.Height
-        For w1 = 0 To pWidth Step img.Width
-          picBox.PaintPicture img.Picture, w1, h1
-        Next
-      Next
-    
-    ' If the wallpaper is centered or stretched
-    Else
-      Dim wpstil As String
-      ' WallpaperStyle : Value Data
-      ' Center 0 'Fill 4 'Fit 3 'Span 5 'Stretch 2  'Tile 1
-      wpstil = QueryValue(HKEY_CURRENT_USER, "Control Panel\Desktop", "WallpaperStyle")
-      If wpstil = "0" Then ' Centered
-        picBox.PaintPicture img.Picture, (pWidth - img.Width) / 2, (pHeight - img.Height) / 2
-      ElseIf wpstil = "2" Then ' Stretched
-        picBox.PaintPicture img.Picture, 0, 0, pWidth, pHeight, 0, 0, img.Width, img.Height
-      Else
-        picBox.Picture = LoadPicture(wallpaperFile)
+    If Err Then
+      Err.Clear
+      Set img.Picture = LoadPicture_2(wallpaperFile)
+      If Err Then
+        MsgBox "Unable to load the wallpaper file." & vbCr & _
+          "Please check the file path or format and try again." & vbCr & _
+          Err.Number & " : " & Err.Description, , "Error"
+        End
       End If
     End If
+    On Error GoTo 0
     
-    Me.Controls.Remove "imgTemp"
-    Set img = Nothing
+    ' If the image dimensions are equal to the PictureBox dimensions
+    If img.Width = picBoxWidth And img.Height = picBoxHeight Then
+      picBox.Picture = img.Picture
+    Else
+      ' If the wallpaper is tiled
+      If QueryValue(HKEY_CURRENT_USER, "Control Panel\Desktop", "TileWallpaper") = "1" Then
+        ' Tile the wallpaper
+        Dim h1 As Integer, w1 As Integer
+        For h1 = 0 To picBoxHeight Step img.Height
+          For w1 = 0 To picBoxWidth Step img.Width
+            picBox.PaintPicture img.Picture, w1, h1
+          Next
+        Next
+      Else
+        ' Determine wallpaper style
+        Dim imgRatio As Double, picBoxRatio As Double
+        Dim newHeight As Double, newWidth As Double
+        Dim wpstil As Integer
+        ' WallpaperStyle : Value Data
+        ' Center 0 'Fill 4 'Fit 3 'Span 5 'Stretch 2  'Tile 1
+        wpstil = Val(QueryValue(HKEY_CURRENT_USER, "Control Panel\Desktop", "WallpaperStyle"))
+
+        imgRatio = img.Width / img.Height
+        picBoxRatio = picBoxWidth / picBoxHeight
+
+        Select Case wpstil
+          Case 0 ' Centered
+            picBox.PaintPicture img.Picture, (picBoxWidth - img.Width) / 2, (picBoxHeight - img.Height) / 2
+          Case 2  ' Stretched
+            picBox.PaintPicture img.Picture, 0, 0, picBoxWidth, picBoxHeight, 0, 0, img.Width, img.Height
+          Case 3, 6 ' Fit
+            If imgRatio > picBoxRatio Then
+                ' Width fits, height is adjusted to maintain aspect ratio
+                newHeight = picBoxWidth / imgRatio
+                picBox.PaintPicture img.Picture, 0, (picBoxHeight - newHeight) / 2, picBoxWidth, newHeight, 0, 0, img.Width, img.Height
+            Else
+                ' Height fits, width is adjusted to maintain aspect ratio
+                newWidth = picBoxHeight * imgRatio
+                picBox.PaintPicture img.Picture, (picBoxWidth - newWidth) / 2, 0, newWidth, picBoxHeight, 0, 0, img.Width, img.Height
+            End If
+          Case 10, 22 ' Fill
+            If imgRatio < picBoxRatio Then
+                ' Width fits, height overflows (Aspect ratio is larger for the image)
+                newHeight = picBoxWidth / imgRatio
+                picBox.PaintPicture img.Picture, 0, (picBoxHeight - newHeight) / 2, picBoxWidth, newHeight, 0, 0, img.Width, img.Height
+            Else
+                ' Height fits, width overflows (Aspect ratio is larger for the screen)
+                newWidth = picBoxHeight * imgRatio
+                picBox.PaintPicture img.Picture, (picBoxWidth - newWidth) / 2, 0, newWidth, picBoxHeight, 0, 0, img.Width, img.Height
+            End If
+          Case Else
+            picBox.Picture = LoadPicture(wallpaperFile)
+        End Select
+      End If
+    End If
+'    Me.Controls.Remove "imgTemp"
+'    Set img = Nothing
   End If
 End Sub
 
+'Loads other image format files. PNG, TIFF
+Private Function LoadPicture_2(strPath As String) As StdPicture
+  With CreateObject("WIA.ImageFile")
+    .LoadFile (strPath)
+    Set LoadPicture_2 = .FileData.Picture
+  End With
+End Function
 
+Private Function FileExists(ByVal sFileName As String) As Boolean
+  Dim intReturn As Integer
+  On Error GoTo FileExists_Error
+  intReturn = GetAttr(sFileName)
+  FileExists = True
+  Exit Function
+
+FileExists_Error:
+  FileExists = False
+End Function
