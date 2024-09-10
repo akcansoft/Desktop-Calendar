@@ -63,7 +63,7 @@ Option Explicit
 ' on the desktop image.
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' First release: 16/04/2004
-' v1.2 : 09/09/2024
+' v1.2 : 10/09/2024
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' 1) The application can be set to run at Windows startup.
 '    To enable this, runAtStartup = True must be set in settings.ini.
