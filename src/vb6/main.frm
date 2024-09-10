@@ -3,7 +3,7 @@ Begin VB.Form frmMain
    Appearance      =   0  'Flat
    BackColor       =   &H80000005&
    BorderStyle     =   0  'None
-   Caption         =   "Form1"
+   Caption         =   "form"
    ClientHeight    =   2805
    ClientLeft      =   0
    ClientTop       =   75
@@ -62,34 +62,43 @@ Option Explicit
 ' and next month calendar in local language
 ' on the desktop image.
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-' Mesut AKCAN
 ' First release: 16/04/2004
+' v1.2 : 09/09/2024
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-' Update: 06/09/2024
-' v1.1
-' R3
+' 1) The application can be set to run at Windows startup.
+'    To enable this, runAtStartup = True must be set in settings.ini.
+' 2) An outline option has been added to the text in the calendar.
+'    For this, the following option should be set in settings.ini:
+'    textEffect = outline
+'    options:
+'    none - No effect is applied.
+'    shadow - Adds a shadow behind the text.
+'    outline- Adds an outline around the text.
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' Mesut AKCAN
+' makcan@gmail.com
 ' https://akcansoft.blogspot.com
 ' https://youtube.com/mesutakcan
 ' https://github.com/akcansoft
-' makcan@gmail.com
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Const wallpaperFname As String = "\aswallpaper.bmp"
-Const holidaysFname As String = "\holidays.txt"
+Const wallpaperFname As String = "wallpaper.bmp"
+Const holidaysFname As String = "holidays.txt"
 Const iniFile As String = "settings.ini"
+Const hkcu As String = "HKEY_CURRENT_USER\"
+Const regStartUpRunPath As String = hkcu & "Software\Microsoft\Windows\CurrentVersion\Run\"
+Const regCpanelDeskopPath As String = hkcu & "Control Panel\Desktop\"
 Const COLOR_DESKTOP As Long = 1
 Const SPI_SETDESKWALLPAPER = 20
 Const SPIF_UPDATEINIFILE = 1
+Const SPIF_SENDWININICHANGE = 2
 Const HKEY_CURRENT_USER = &H80000001
 
-Private Declare Function RoundRect Lib "gdi32" (ByVal hdc As Long, _
-  ByVal X1 As Long, ByVal Y1 As Long, _
-  ByVal X2 As Long, ByVal Y2 As Long, _
+Private Declare Function RoundRect Lib "gdi32" ( _
+  ByVal hdc As Long, ByVal X1 As Long, ByVal Y1 As Long, ByVal X2 As Long, ByVal Y2 As Long, _
   ByVal X3 As Long, ByVal Y3 As Long) As Long
 
-Private Declare Function SystemParametersInfo Lib "user32" Alias "SystemParametersInfoA" _
-  (ByVal uAction As Long, ByVal uParam As Long, ByVal lpvParam As String, _
-  ByVal fuWinIni As Long) As Long
+Private Declare Function SystemParametersInfo Lib "user32" Alias "SystemParametersInfoA" ( _
+  ByVal uAction As Long, ByVal uParam As Long, ByVal lpvParam As String, ByVal fuWinIni As Long) As Long
 Private Declare Function GetSysColor Lib "user32" (ByVal nIndex As Long) As Long
 
 'Font colors
@@ -97,37 +106,75 @@ Dim fontColor As Long 'The color of the calendar font
 Dim shadowColor As Long 'The color of the shadow effect
 Dim holidayColor As Long 'The color for the holidays text
 Dim weekDayColor As Long 'The color for the weekdays text
+
+Dim textEffect As String 'The visual effect applied to the text
 Dim currentDayShape As String ' The shape used to highlight the current day.
 Dim currentMonth As Byte, currentYear As Integer
 Dim weekDays(1 To 7) As String * 2
 Dim holidays As String
+Dim reg As New Registry
 
 Private Sub Form_Load()
   Dim n As Byte
-  Dim orjWallpaperFile As String
-  Dim months(1 To 12) As String ', dateText As String
+  Dim activeWallpaper As String
+  Dim months(1 To 12) As String
   Dim offsetX As Integer, offsetY As Integer
   Dim posX As Integer, posY As Integer
-  Dim prevWallpaper As String, wpFile As String
+  Dim prevWallpaper As String, calendarSourceImage As String
+  Dim runAtStartup As Boolean, appFullPath As String
+  Dim regKey As String, retValue
+  
+  appFullPath = App.Path & "\" & App.EXEName & ".exe"
+  runAtStartup = CBool(ReadINI(iniFile, "APP", "runAtStartup", "False"))
+  regKey = regStartUpRunPath & App.ProductName
+  retValue = reg.ReadKey(regKey)
+  If runAtStartup Then
+    If retValue <> appFullPath Then
+      retValue = reg.WriteKey(regKey, appFullPath)
+    End If
+  Else
+    If retValue <> "" Then
+      retValue = reg.DeleteKey(regKey)
+    End If
+  End If
   
   shadowColor = CLng(ReadINI(iniFile, "FONT", "shadowColor", "&H000000"))
   fontColor = CLng(ReadINI(iniFile, "FONT", "fontColor", "&HFFFFFF"))
   holidayColor = CLng(ReadINI(iniFile, "FONT", "holidayColor", "&H0000FF"))
   weekDayColor = CLng(ReadINI(iniFile, "FONT", "weekdayColor", "&H15AE4F"))
-  
+  textEffect = ReadINI(iniFile, "FONT", "textEffect")
   currentDayShape = ReadINI(iniFile, "SHAPE", "currentDayShape", "RoundRectangle")
   
-  orjWallpaperFile = QueryValue(HKEY_CURRENT_USER, "Control Panel\Desktop", "Wallpaper")
+  ' Read the currently active wallpaper from the registry
+  activeWallpaper = reg.ReadKey(regCpanelDeskopPath & "Wallpaper")
+  ' Read the previously set wallpaper from the INI file
   prevWallpaper = ReadINI(iniFile, "WALLPAPER", "prevWallpaper")
-   
-  ' Check if the original wallpaper exists and differs from the app wallpaper
-  If orjWallpaperFile <> "" And FileExists(orjWallpaperFile) And orjWallpaperFile <> App.Path & wallpaperFname Then
-      wpFile = orjWallpaperFile
-      If orjWallpaperFile <> prevWallpaper Then WriteINI iniFile, "WALLPAPER", "prevWallpaper", orjWallpaperFile
-  ElseIf prevWallpaper <> "" And FileExists(prevWallpaper) Then
-      wpFile = prevWallpaper
+  
+  ' Check if the active wallpaper is the same as the application-generated wallpaper (calendar added)
+  If activeWallpaper = App.Path & "\" & wallpaperFname Then
+    ' If prevWallpaper exists, set it as the active wallpaper
+    If FileExists(prevWallpaper) Then
+      activeWallpaper = prevWallpaper
+    Else
+      ' If prevWallpaper doesn't exist, set activeWallpaper to empty (no wallpaper)
+      activeWallpaper = ""
+    End If
   End If
   
+  ' If the active wallpaper is a valid file
+  If FileExists(activeWallpaper) Then
+    ' Set calendarSourceImage to the active wallpaper
+    calendarSourceImage = activeWallpaper
+    ' If the previous wallpaper differs from the active wallpaper, update the INI file
+    If prevWallpaper <> activeWallpaper Then
+      WriteINI iniFile, "WALLPAPER", "prevWallpaper", activeWallpaper
+    End If
+  Else
+    ' If no valid wallpaper exists, clear calendarSourceImage and delete the prevWallpaper key from the INI file
+    calendarSourceImage = ""
+    DeleteINIKey iniFile, "WALLPAPER", "prevWallpaper"
+  End If
+    
   ' Create a list of month names in the local language
   For n = 1 To 12
     months(n) = Format("1/" & n & "/2024", "MMMM") ' Year is irrelevant
@@ -154,7 +201,7 @@ Private Sub Form_Load()
 
   With picBox
     .BorderStyle = 0
-    .Appearance = 0
+    '.Appearance = 0
     .Width = Me.ScaleWidth
     .Height = Me.ScaleHeight
     .Move 0, 0
@@ -167,7 +214,8 @@ Private Sub Form_Load()
     ' The fill color of the shape for the current day
     .FillColor = CLng(ReadINI(iniFile, "SHAPE", "shapeFillColor", "&H30B4F3"))
     
-    ApplyWallpaper wpFile
+    ApplyWallpaper calendarSourceImage
+    'Set reg = Nothing
     
     ' Position of the calendar start point(top center) + offset
     offsetX = (.Width / 2) - (.TextWidth("8") * 21 / 2) + CInt(ReadINI(iniFile, "CALENDAR POSITION", "startOffsetX", "0")) '21 = 3chr * 7day
@@ -207,10 +255,14 @@ Private Sub Form_Load()
   
   'save picturebox image to file
   Dim wallpaperFileName As String
-  wallpaperFileName = App.Path & wallpaperFname
+  wallpaperFileName = App.Path & "\" & wallpaperFname
   SavePicture picBox.Image, wallpaperFileName
   ' Set the saved image file as the desktop wallpaper
-  SystemParametersInfo SPI_SETDESKWALLPAPER, 0, wallpaperFileName, SPIF_UPDATEINIFILE
+  If FileExists(wallpaperFileName) Then
+    'reg.WriteKey regCpanelDeskopPath & "Wallpaper", wallpaperFileName
+    SystemParametersInfo SPI_SETDESKWALLPAPER, 0, wallpaperFileName, SPIF_UPDATEINIFILE Or SPIF_SENDWININICHANGE
+    If calendarSourceImage = "" Then SystemParametersInfo SPI_SETDESKWALLPAPER, 0, wallpaperFileName, SPIF_UPDATEINIFILE Or SPIF_SENDWININICHANGE
+  End If
   'App Exit
   End
 End Sub
@@ -300,19 +352,32 @@ End Function
 Private Sub PicPrint(x As Integer, y As Integer, shadowOffset As Byte, text As String, txtColor As Long)
   With picBox
     .ForeColor = shadowColor
-    .CurrentX = x + shadowOffset
-    .CurrentY = y + shadowOffset
-    picBox.Print text
+    If textEffect = "shadow" Or textEffect = "outline" Then
+      .CurrentX = x + shadowOffset
+      .CurrentY = y + shadowOffset
+      picBox.Print text
+    End If
+    If textEffect = "outline" Then
+      .CurrentX = x - shadowOffset
+      .CurrentY = y - shadowOffset
+      picBox.Print text
+      .CurrentX = x + shadowOffset
+      .CurrentY = y - shadowOffset
+      picBox.Print text
+      .CurrentX = x - shadowOffset
+      .CurrentY = y + shadowOffset
+      picBox.Print text
+    End If
     .ForeColor = txtColor
     .CurrentX = x
     .CurrentY = y
-  picBox.Print text
+    picBox.Print text
 End With
 End Sub
 
 Private Function LoadHolidays() As String
   Dim holidaysFile As String
-  holidaysFile = App.Path & holidaysFname
+  holidaysFile = App.Path & "\" & holidaysFname
   
   ' Handle errors when opening the file
   On Error GoTo ErrorHandler
@@ -367,7 +432,7 @@ Private Sub ApplyWallpaper(wallpaperFile As String)
       picBox.Picture = img.Picture
     Else
       ' If the wallpaper is tiled
-      If QueryValue(HKEY_CURRENT_USER, "Control Panel\Desktop", "TileWallpaper") = "1" Then
+      If reg.ReadKey(regCpanelDeskopPath & "TileWallpaper") = "1" Then
         ' Tile the wallpaper
         Dim h1 As Integer, w1 As Integer
         For h1 = 0 To picBoxHeight Step img.Height
@@ -380,10 +445,9 @@ Private Sub ApplyWallpaper(wallpaperFile As String)
         Dim imgRatio As Double, picBoxRatio As Double
         Dim newHeight As Double, newWidth As Double
         Dim wpstil As Integer
-        ' WallpaperStyle : Value Data
-        ' Center 0 'Fill 4 'Fit 3 'Span 5 'Stretch 2  'Tile 1
-        wpstil = Val(QueryValue(HKEY_CURRENT_USER, "Control Panel\Desktop", "WallpaperStyle"))
-
+        
+        ' Wallpaper Style
+        wpstil = Val(reg.ReadKey(regCpanelDeskopPath & "WallpaperStyle"))
         imgRatio = img.Width / img.Height
         picBoxRatio = picBoxWidth / picBoxHeight
 
@@ -417,8 +481,6 @@ Private Sub ApplyWallpaper(wallpaperFile As String)
         End Select
       End If
     End If
-'    Me.Controls.Remove "imgTemp"
-'    Set img = Nothing
   End If
 End Sub
 
@@ -440,3 +502,4 @@ Private Function FileExists(ByVal sFileName As String) As Boolean
 FileExists_Error:
   FileExists = False
 End Function
+
