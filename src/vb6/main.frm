@@ -63,26 +63,20 @@ Option Explicit
 ' on the desktop image.
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' First release: 16/04/2004
-' v1.2 : 10/09/2024
+' v1.3 : 03/02/2025
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-' 1) The application can be set to run at Windows startup.
-'    To enable this, runAtStartup = True must be set in settings.ini.
-' 2) An outline option has been added to the text in the calendar.
-'    For this, the following option should be set in settings.ini:
-'    textEffect = outline
-'    options:
-'    none - No effect is applied.
-'    shadow - Adds a shadow behind the text.
-'    outline- Adds an outline around the text.
+' hatýrlatma eklendi
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' Mesut AKCAN
 ' makcan@gmail.com
 ' https://akcansoft.blogspot.com
+' https://mesutakcan.blogspot.com
 ' https://youtube.com/mesutakcan
 ' https://github.com/akcansoft
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Const wallpaperFname As String = "wallpaper.bmp"
 Const holidaysFname As String = "holidays.txt"
+Const remindersFname As String = "reminders.txt"
 Const iniFile As String = "settings.ini"
 Const hkcu As String = "HKEY_CURRENT_USER\"
 Const regStartUpRunPath As String = hkcu & "Software\Microsoft\Windows\CurrentVersion\Run\"
@@ -105,13 +99,14 @@ Private Declare Function GetSysColor Lib "user32" (ByVal nIndex As Long) As Long
 Dim fontColor As Long 'The color of the calendar font
 Dim shadowColor As Long 'The color of the shadow effect
 Dim holidayColor As Long 'The color for the holidays text
+Dim reminderColor As Long 'The color for the reminders
 Dim weekDayColor As Long 'The color for the weekdays text
 
 Dim textEffect As String 'The visual effect applied to the text
 Dim currentDayShape As String ' The shape used to highlight the current day.
 Dim currentMonth As Byte, currentYear As Integer
 Dim weekDays(1 To 7) As String * 2
-Dim holidays As String
+Dim holidays As String, reminders As String
 Dim reg As New Registry
 
 Private Sub Form_Load()
@@ -141,6 +136,7 @@ Private Sub Form_Load()
   shadowColor = CLng(ReadINI(iniFile, "FONT", "shadowColor", "&H000000"))
   fontColor = CLng(ReadINI(iniFile, "FONT", "fontColor", "&HFFFFFF"))
   holidayColor = CLng(ReadINI(iniFile, "FONT", "holidayColor", "&H0000FF"))
+  reminderColor = CLng(ReadINI(iniFile, "FONT", "reminderColor", "&HFFFF00"))
   weekDayColor = CLng(ReadINI(iniFile, "FONT", "weekdayColor", "&H15AE4F"))
   textEffect = ReadINI(iniFile, "FONT", "textEffect")
   currentDayShape = ReadINI(iniFile, "SHAPE", "currentDayShape", "RoundRectangle")
@@ -186,7 +182,10 @@ Private Sub Form_Load()
   Next
   
   ' Load holidays from the file
-  holidays = LoadHolidays()
+  holidays = LoadDates(holidaysFname)
+  ' Load reminders from the file
+  reminders = LoadDates(remindersFname)
+  
   With Me
     .ScaleMode = vbPixels
     .BorderStyle = 0
@@ -268,7 +267,7 @@ Private Sub Form_Load()
 End Sub
 
 '~~~~~~~~~~~~ CALENDAR ~~~~~~~~~~~~~~~~~~
-Private Sub Calendar(x As Integer, y As Integer, o As Byte)
+Private Sub Calendar(x As Integer, y As Integer, shadowOffset As Byte)
   Dim col As Byte, row As Byte, n As Byte
   Dim dayCounter As Byte
   Dim posX As Integer, posY As Integer
@@ -285,7 +284,7 @@ Private Sub Calendar(x As Integer, y As Integer, o As Byte)
     
     ' ~~~~~~~~~~~~~ Write the weekdays with 2 letters ~~~~~~~~
     For n = 1 To 7
-      PicPrint (n - 1) * txtWidth * 3 + x, posY, o, weekDays(n), weekDayColor
+      PicPrint (n - 1) * txtWidth * 3 + x, posY, shadowOffset, weekDays(n), weekDayColor
     Next
 
     '~~~~~~~~~~~~~~ Write the day numbers ~~~~~~~~~
@@ -304,7 +303,7 @@ Private Sub Calendar(x As Integer, y As Integer, o As Byte)
       col = col + 1
       
       ' If this is the current month's calendar
-      If o = 2 Then
+      If shadowOffset = 2 Then
         If dayCounter = Day(Now) Then ' If today is the current date
           ' Draw a filled ellipse around the date
           Select Case currentDayShape
@@ -323,6 +322,22 @@ Private Sub Calendar(x As Integer, y As Integer, o As Byte)
           picBox.Refresh
         End If
       End If
+          
+      'reminder
+      Dim testDay
+      testDay = dayCounter & "/" & currentMonth
+      If (InStr(1, reminders, "," & testDay & ",") > 0) Or (InStr(1, reminders, "," & testDay & "/" & currentYear & ",") > 0) Then
+        Dim fillc, forec
+        fillc = picBox.FillColor
+        forec = picBox.ForeColor
+        picBox.FillColor = reminderColor
+        picBox.ForeColor = vbBlack
+        'picBox.Circle (posX + txtWidth * 0.2, posY + txtHeight * 0.8), txtHeight * 0.3, vbBlack
+        'picBox.Line Step(-txtWidth * 0.25, txtHeight * 0.5)-Step(txtWidth * 2.5, txtHeight * 0.5), vbBlack, B
+        RoundRect picBox.hdc, posX - txtWidth * 0.5, posY + txtHeight * 0.5, posX + txtWidth * 2.5, posY + txtHeight, txtHeight * 0.5, txtHeight * 0.5 'X1, Y1, X2, Y2, X radius, Y radius
+        picBox.FillColor = fillc
+        picBox.ForeColor = forec
+      End If
       
       ' If the day number is less than 10, adjust the position by one character
       If dayCounter < 10 Then
@@ -331,21 +346,22 @@ Private Sub Calendar(x As Integer, y As Integer, o As Byte)
       End If
       
       ' Print the day number
-      PicPrint posX, posY, o, CStr(dayCounter), GetDayColor(dayCounter, currentMonth, currentYear, holidays)
+      PicPrint posX, posY, shadowOffset, CStr(dayCounter), GetDayColor(CStr(dayCounter), CStr(currentMonth), CStr(currentYear))
+      
     Next
   End With
 End Sub
 
-Private Function GetDayColor(dayCounter As Byte, currentMonth As Byte, currentYear As Integer, holidays As String) As Long
-  ' Weekends are red
-  If Weekday(dayCounter & "/" & currentMonth & "/" & currentYear, vbMonday) > 5 Then
-    GetDayColor = holidayColor
+Private Function GetDayColor(dayCounter As String, currentMonth As String, currentYear As String) As Long
+  Dim testDay
+  testDay = dayCounter & "/" & currentMonth
+  
+  ' If it's a weekend or holidays, show it in holidayColor
+  'If (Weekday(testDay, vbMonday) > 5) Or (InStr(1, holidays, "," & dayCounter & "/" & currentMonth & ",") > 0) Then
+  If (Weekday(testDay, vbMonday) > 5) Or (InStr(1, holidays, "," & testDay & ",") > 0) Or (InStr(1, holidays, "," & testDay & "/" & currentYear & ",") > 0) Then
+      GetDayColor = holidayColor
   Else
     GetDayColor = fontColor
-    ' If there are holidays
-    If holidays <> "" And InStr(1, holidays, "," & CStr(dayCounter) & "/" & CStr(currentMonth) & ",") > 0 Then
-      GetDayColor = holidayColor
-    End If
   End If
 End Function
 
@@ -375,31 +391,29 @@ Private Sub PicPrint(x As Integer, y As Integer, shadowOffset As Byte, text As S
 End With
 End Sub
 
-Private Function LoadHolidays() As String
-  Dim holidaysFile As String
-  holidaysFile = App.Path & "\" & holidaysFname
-  
-  ' Handle errors when opening the file
-  On Error GoTo ErrorHandler
-  If FileExists(holidaysFile) Then  ' If the holidays file exists
-    Dim lineText As String, txtHoliday As String
-    Open holidaysFile For Input As #1
+Private Function LoadDates(fileName As String) As String
+  Dim dates As String, lineText As String
+  ' Try opening the file
+  fileName = App.Path & "\" & fileName
+  If FileExists(fileName) Then
+    On Error GoTo ErrorHandler
+    Open fileName For Input As #1
     Do Until EOF(1)
       Line Input #1, lineText
       lineText = Trim(lineText)
-    If IsDate(lineText & "/2024") Then txtHoliday = txtHoliday & lineText & ","
+      ' Add valid dates to the dates string
+      If IsDate(lineText) Then dates = dates & lineText & ","
     Loop
-    Close
-    If txtHoliday <> "" Then LoadHolidays = "," & txtHoliday
+    Close #1
+    ' If dates are found, return them
+    If dates <> "" Then LoadDates = "," & dates
   End If
-  
-  ' Disable error handling
   On Error GoTo 0
-Exit Function
+  Exit Function
 
 ErrorHandler:
-  MsgBox holidaysFile & vbCr & "file could not be opened." & vbCr & "Error: " & Err.Description, vbCritical
-  If Err.Number <> 0 Then Close #1
+  MsgBox "Unable to open file: " & fileName & vbCr & "Error: " & Err.Description, vbCritical
+  Close #1
   On Error GoTo 0
 End Function
 
