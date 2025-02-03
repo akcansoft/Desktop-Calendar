@@ -8,19 +8,17 @@ This application generates a desktop background with calendars for the current a
 
 The **AS Desktop Calendar** is a Visual Basic 6 (VB6) application that dynamically overlays a calendar onto the desktop wallpaper. It includes functionality for showing holidays and weekends and offers customization options for appearance.
 
-## What's New in v1.2
+## What's New in v1.3
 
-- **Startup Option**: The application can be configured to run at Windows startup by setting `runAtStartup = True` in `settings.ini`.
-- **Text Outline Effect**: New option added to apply an outline effect to calendar text. Configure this by setting `textEffect = outline` in `settings.ini`.
-  - **textEffect** options:
-  - `none`, `shadow` and  `outline`
+- **Reminder Highlighting:** Reminder days added to `reminders.txt` file are marked in the calendar.
 - **Bug Fixes and Performance Improvements:** Several optimizations to improve memory usage and stability during wallpaper generation.
 
 ## Key Features
 
 - **Dynamic Wallpaper Generation**: Generates custom wallpapers based on calendar data, allowing for a personalized desktop experience.
-- **Holiday Highlighting**: Automatically highlights holidays in the calendar, making it easy to keep track of important dates.
 - **Weekend Highlighting:** Automatically highlights weekends.
+- **Holiday Highlighting**: Holiday days added to `holidays.txt` file are marked in the calendar.
+- **Reminder Highlighting:** Reminder days added to `reminders.txt` file are marked in the calendar.
 - **Existing Wallpaper Integration**: Integrates with existing wallpaper files, ensuring a seamless blend with your current desktop background.
 - **Customizable Appearance**: Customize the calendar's appearance, including font, color, and shape settings via an INI file.
 - **Locale Support:** Uses the system locale to display the calendar’s months and weekdays in the local language.
@@ -31,15 +29,19 @@ The **AS Desktop Calendar** is a Visual Basic 6 (VB6) application that dynamical
 ## Usage
 
 ### 1. Installation
-- Copy the compiled executable file, `holidays.txt`, and  `setting.ini` file to the desired directory.
+- Copy the compiled executable file, `reminders.txt`, `holidays.txt`, and  `settings.ini` file to the desired directory.
 
 **Note:** Windows Defender may flag the executable as a potential threat because it registers the program to run at startup.
 
 ### 2. Configuring Holidays
-- Add your holidays to the `holidays.txt` file in the `dd/mm` format, with one date per line (e.g., `25/12` for December 25th).
+- Add your holidays to the `holidays.txt` file in the `d/m` or `d/m/y`  format, with one date per line (e.g., `25/12` for December 25th, `5/3/2025` for 5 March 2025).<br>
+If the year is not entered in the date, the highlighting is repeated every year
 
-### 3. Configuring Settings
+### 3. Configuring Reminders
+- Add your reminders to the `reminders.txt` file in the `d/m` or `d/m/y`  format, with one date per line (e.g., `25/12` for December 25th, `5/3/2025` for 5 March 2025).<br>
+If the year is not entered in the date, the highlighting is repeated every year
 
+### 4. Configuring Settings
 The `settings.ini` file allows you to customize various aspects of the calendar displayed on your desktop wallpaper. Below are the configuration options available:
 
 #### [APP]
@@ -78,6 +80,7 @@ These settings allow you to tailor the appearance and positioning of the calenda
 
 - **`wallpaper.bmp`:** The generated wallpaper file.
 - **`holidays.txt`:** A text file containing a list of holidays.
+- **`reminders.txt`:** A text file containing a list of reminders.
 - **`settings.ini`:** Contains customizable settings like font size, colors, and calendar position on the desktop.
 
 ## Dependencies
@@ -91,6 +94,7 @@ These settings allow you to tailor the appearance and positioning of the calenda
 - **v1.0:** 30/08/2024
 - **v1.1:** 06/09/2024
 - **v1.2:** 10/09/2024
+- **v1.3:** 03/05/2025
 
 ## Contribution
 
@@ -103,6 +107,6 @@ This project is licensed under the GPL-3.0 License.
 ## Author
 
 - **Mesut AKCAN**
-  - Blog: [akcansoft.blogspot.com](http://akcansoft.blogspot.com)
+  - Blog: [akcansoft.blogspot.com](http://akcansoft.blogspot.com) - [mesutakcan.blogspot.com](http://mesutakcan.blogspot.com)
   - YouTube: [youtube.com/mesutakcan](http://youtube.com/mesutakcan)
   - Email: [makcan@gmail.com](mailto:makcan@gmail.com)
