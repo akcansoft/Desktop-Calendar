@@ -94,7 +94,7 @@ These settings allow you to tailor the appearance and positioning of the calenda
 - **v1.0:** 30/08/2024
 - **v1.1:** 06/09/2024
 - **v1.2:** 10/09/2024
-- **v1.3:** 03/05/2025
+- **v1.3:** 03/02/2025
 
 ## Contribution
 
