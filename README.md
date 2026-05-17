@@ -2,7 +2,7 @@
 
 This application generates a desktop background with calendars for the current and next month, displayed in the system’s locale language.
 
-![Screenshot](https://github.com/akcansoft/Desktop-Calendar/blob/main/ss-1.jpg) <img src="https://github.com/akcansoft/Desktop-Calendar/blob/main/ss-2.jpg" height=335>
+![Screenshot](https://github.com/mesutakcan/Desktop-Calendar/blob/main/ss-1.jpg) <img src="https://github.com/mesutakcan/Desktop-Calendar/blob/main/ss-2.jpg" height=335>
 
 ## Overview
 
@@ -107,6 +107,6 @@ This project is licensed under the GPL-3.0 License.
 ## Author
 
 - **Mesut AKCAN**
-  - Blog: [akcansoft.blogspot.com](http://akcansoft.blogspot.com) - [mesutakcan.blogspot.com](http://mesutakcan.blogspot.com)
+  - Blog: [mesutakcan.blogspot.com](http://mesutakcan.blogspot.com)
   - YouTube: [youtube.com/mesutakcan](http://youtube.com/mesutakcan)
   - Email: [makcan@gmail.com](mailto:makcan@gmail.com)
